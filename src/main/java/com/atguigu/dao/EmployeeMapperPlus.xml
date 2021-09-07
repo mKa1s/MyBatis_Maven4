@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.atguigu.dao.EmployeeMapperPlus">
+
+    <!--自定义某个javaBean的封装规则
+    id:唯一id方便引用
+    type:自定义规则的Java类型
+    -->
+    <resultMap id="MyEmp" type="com.atguigu.bean.Employee">
+        <!--
+        column:指定哪一列
+        property：指定对应的JavaBean属性
+        id定义主键底层回有优化 result：定义普通封装规则
+        -->
+        <id column="id" property="id"></id>
+        <result column="last_name" property="lastName"></result>
+        <!--其他属性名相同可以不定义 会自动识别 推荐去定义-->
+        <result column="email" property="email"/>
+        <result column="gender" property="gender"/>
+    </resultMap>
+
+    <select id="getEmpById" resultMap="MyEmp">
+        select * from tbl_employee where id = #{id}
+    </select>
+
+    <!--
+    场景一：
+        查询Employee的同时查询员工对应的部门
+        Employee==Department
+        一个员工有与之对应的部门信息
+    -->
+    <!-- id  last_name  gender    d_id     did  dept_name  -->
+
+    <!--
+        联合查询：级联属性封装结果集
+    -->
+    <resultMap id="MyDifEmp" type="com.atguigu.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <result column="did" property="dept.id"/>
+        <result column="dept_name" property="dept.departmentName"/>
+    </resultMap>
+
+
+    <resultMap id="MyDifEmp2" type="com.atguigu.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <!--
+            association 可以指定联合的JavaBean对象
+            property="dept" 指定哪个属性是联合的对象
+            javaType:指定这个属性对象的类型【不能省略】
+        -->
+        <association property="dept" javaType="com.atguigu.bean.Department">
+            <id column="did" property="id"/>
+            <result column="dept_name" property="departmentName"/>
+        </association>
+    </resultMap>
+    
+    <select id="getEmpAndDept" resultMap="MyDifEmp2">
+        SELECT e.id id,e.last_name last_name,gender gender,e.d_id d_id,
+              d.id did, d.dept_name dept_name FROM tbl_employee e, tbl_dept d
+        WHERE e.d_id=d.id AND e.id=#{id}
+    </select>
+
+    <!-- 使用 association 分步查询
+        1、先按照员工id查询员工信息
+        2、根据查询员工信息中的d_id值去部分查部门信息
+        3、部门设置员工内
+
+
+        可以用延迟加载！！！！！！！！
+    -->
+    <resultMap id="MyEmpById" type="com.atguigu.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="email" property="email"/>
+        <result column="gender" property="gender"/>
+        <!-- association定义关联对象的封装规则
+            select 表明当前属性是调用select指定的方法查出的结果
+            column:指定将那一列的值传给这个方法
+
+            流程：使用select指定的方法（传入column指定这列的参数的值）查出对象，并封装给property
+        -->
+        <association property="dept"
+                     select="com.atguigu.dao.DepartmentMapper.getDeptById"
+                     column="d_id">
+        </association>
+    </resultMap>
+    <select id="getEmpByIdStep" resultMap="MyEmpById">
+        select * from tbl_employee where id=#{id}
+    </select>
+
+
+    <select id="getEmpsByDeptId" resultType="com.atguigu.bean.Employee">
+        select * from tbl_employee where d_id=#{deptId}
+    </select>
+
+    
+    <resultMap id="MyEmpDis" type="com.atguigu.bean.Employee">
+        <id column="id" property="id"/>
+        <result column="last_name" property="lastName"/>
+        <result column="gender" property="gender"/>
+        <!--column:指定判定的列名
+             javaType:列对应的java类型
+        -->
+        <discriminator javaType="string" column="gender">
+            <!--女生-->
+            <case value="0" resultType="com.atguigu.bean.Employee">
+                <association property="dept"
+                             select="com.atguigu.dao.DepartmentMapper.getDeptById"
+                             column="d_id">
+                </association>
+            </case>
+            <!--男生-->
+            <case value="1" resultType="com.atguigu.bean.Employee">
+                <id column="id" property="id"/>
+                <result column="last_name" property="lastName"/>
+                <result column="last_name" property="email"/>
+                <result column="gender" property="gender"/>
+            </case>
+        </discriminator>
+
+    </resultMap>
+</mapper>

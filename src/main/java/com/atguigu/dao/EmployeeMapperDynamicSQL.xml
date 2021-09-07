@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.atguigu.dao.EmployeeMapperDynamicSQL">
+    <!--
+    if
+    choose(when,otherwise)  == switch case
+        只会进入一个
+    trim 字符串截取(where(封装查询条件),set)
+    foreach
+    -->
+    <!--查询员工，要求，携带了哪个字段查询条件就带上这个字段的值-->
+    <!-- public List<Employee> getEmpsByConditionIf(Employee employee);-->
+
+    <select id="getEmpsByConditionIf" resultType="com.atguigu.bean.Employee">
+        select * from tbl_employee
+
+        <!--查询的时候如果某些条件没带可能sql拼装有问题
+            1、给where后面加上1=1
+            2、加入where标签 会将where标签中多出来的and或or去掉 ，只会去掉第一个多出来的and和or
+         -->
+        <where>
+          <if test="id!=null">
+              id=#{id}
+          </if>
+          <if test="lastName!=null and lastName!=''">
+              and last_name like #{lastName}
+          </if>
+          <if test="email!=null and email.trim()!=''">
+              and email=#{email}
+          </if>
+          <!-- ognl会自动进行字符串与数字的判断 -->
+          <if test="gender==0 or gender == 1">
+              and gender=#{gender}
+          </if>
+
+        </where>
+    </select>
+
+    <!--public List<Employee> getEmpsByConditionIf(Employee employee);-->
+    <select id="getEmpsByConditionTrim" resultType="com.atguigu.bean.Employee">
+        select * from tbl_employee
+        <!-- 后面多出的and或者or where不能解决
+        prefix="":前缀：trim标签体中式整个字符串拼串后的结果
+                prefix给拼串后的整个字符串加一个前缀
+        prefixOverrides="":前缀覆盖：去掉整个字符串前面多余的字符
+        suffix:后缀：给拼串后的整个字符串加一个后缀
+        suffixOverrides:后缀覆盖：去掉整个字符串后面多余的字符
+
+
+        -->
+        <trim prefix="where" suffixOverrides="and">
+            <if test="id!=null">
+                id=#{id} and
+            </if>
+            <if test="lastName!=null and lastName!=''">
+                last_name like #{lastName} and
+            </if>
+            <if test="email!=null and email.trim()!=''">
+                email=#{email} and
+            </if>
+            <!-- ognl会自动进行字符串与数字的判断 -->
+            <if test="gender==0 or gender == 1">
+                gender=#{gender}
+            </if>
+        </trim>
+    </select>
+
+
+    <!-- public List<Employee> getEmpsByConditionChoose(Employee employee)-->
+    <select id="getEmpsByConditionChoose" resultType="com.atguigu.bean.Employee">
+        SELECT * from tbl_employee
+        <where>
+            <choose>
+                <when test="id!=null">
+                    id=#{id}
+                </when>
+                <when test="lastName!=null">
+                    last_name like #{lastName}
+                </when>
+                <when test="email!=null">
+                    email = #{email}
+                </when>
+                <otherwise>
+                    gender = 0
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+
+    <!--public void updateEmp(Employee employee);-->
+    <update id="updateEmp">
+          update tbl_employee
+          <!--set标签去掉，-->
+          <!--或者使用trim-->
+          <set>
+              <if test="lastName!=null">
+                  last_name=#{lastName},
+              </if>
+              <if test="email!=null">
+                  email=#{email},
+              </if>
+              <if test="gender!=null">
+                  gender=#{gender}
+              </if>
+          </set>
+          where id=#{id}
+    </update>
+
+    <!--public List<Employee> getEmpsByConditionForeach(List<Integer> ids);-->
+    <select id="getEmpsByConditionForeach" resultType="com.atguigu.bean.Employee">
+        select * from tbl_employee where id in
+        <!--
+            collection:指定要遍历的集合
+            item：将当前指定遍历的元素赋值给指定的变量
+            separator:每个元素的分隔符
+            open:遍历出的所有结果拼接一个开始的字符
+            close:遍历出所有结果拼接一个结束的字符
+            #{变量名}就能取出变量的值也就是当前遍历出的元素
+            index:索引，遍历list的时候是索引，遍历map的时候是map的key，item是map的值-->
+        <foreach collection="ids" item="item_id" separator="," open="(" close=")">
+            #{item_id}
+        </foreach>
+    </select>
+
+    <!-- public void addEmps(@Param("emps") List<Employee> emps);-->
+    <insert id="addEmps">
+        insert into tbl_employee(
+        <include refid="insertColumn"/>
+        ) VALUES
+        <foreach collection="emps" item="emp" separator=",">
+            (#{emp.lastName},#{emp.email},#{emp.gender},#{emp.id})
+        </foreach>
+    </insert>
+
+
+    <!--两个内置参数
+        不只是方法传递过来的参数可以被用来判断取值
+        mybatis还有俩个内置参数
+        _parameter:代表整个参数
+            单个参数：_parameter就是者参数
+            多个参数：参数会被分装成一个map _parameter就是这个map
+
+        _databaseId:如果皮质了databaseIdProvider标签
+            _databaseId就是代表当前数据库的别名oracle
+    -->
+
+
+    <!--抽取可重用的sql片段，方便后面引用-->
+    <sql id="insertColumn">
+        last_name,email,gender,d_id
+    </sql>
+</mapper>
