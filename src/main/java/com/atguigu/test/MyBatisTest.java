@@ -31,19 +31,7 @@ public class MyBatisTest {
         InputStream inputStream = Resources.getResourceAsStream(resource);
         return new SqlSessionFactoryBuilder().build(inputStream);
     }
-    @Test
-    public void myTest() throws IOException {
-        SqlSessionFactory sqlSessionFactory = getSqlSessionFactory();
 
-        //2、获取sqlSession实例，能执行已经映射的sql语句
-        SqlSession session = sqlSessionFactory.openSession();
-        try {
-            Employee employee = session.selectOne("com.atguigu.bean.EmployeeMapper.selectEmp", 1);
-            System.out.println(employee);
-        } finally {
-            session.close();
-        }
-    }
 
     //接口式编程推荐
     @Test
